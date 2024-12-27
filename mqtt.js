@@ -9,9 +9,9 @@ const TOPICS = {
 };
 
 // MQTT Broker Configuration
-export const client = mqtt.connect("mqtt://192.168.0.109", {
+export const client = mqtt.connect("mqtt://192.168.0.118", {
   username: "detpos",
-  password: "1234567890",
+  password: "asdffdsa",
 });
 
 // Connect to MQTT Broker
