@@ -1,0 +1,24 @@
+{
+  "name": "smartwater-controller(test)",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.20.3",
+    "express": "^4.21.2",
+    "http": "^0.0.1-security",
+    "mongodb": "^6.11.0",
+    "mongoose": "^8.8.3",
+    "mqtt": "^5.10.3",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1"
+  },
+  "devDependencies": {},
+  "description": ""
+}

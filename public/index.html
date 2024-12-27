@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Water Level Monitoring System</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 20px;
+      background-color: #53bee1;
+      color: #fff;
+    }
+    button {
+      margin: 10px;
+      padding: 10px 20px;
+      font-size: 16px;
+      color: #fff;
+      background-color: #007bff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      outline: none;
+    }
+    button.on {
+      background-color: #28a745;
+    }
+    button.off {
+      background-color: #dc3545;
+    }
+    canvas {
+      max-width: 100%;
+      margin-top: 20px;
+    }
+    #alerts {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #ffcccc;
+      color: #333;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Water Level Monitoring System</h1>
+
+  <div>
+    <h2>Current Water Level</h2>
+    <p id="water-level">Fetching...</p>
+  </div>
+
+  <div>
+    <h2>Pump Control</h2>
+    <button id="pump-control" class="off" onclick="togglePump()">Turn Pump ON</button>
+  </div>
+
+  <div id="data">
+    <h2>Water Level History</h2>
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div id="alerts">
+    <h2>Alerts</h2>
+    <p id="alert-message">No alerts</p>
+  </div>
+
+  <script>
+    const socket = io('http://192.168.0.113:3000'); // Connect to the server at port 3000
+    const ctx = document.getElementById("chart").getContext("2d");
+    let chart;
+    let pumpState = false; // Default pump state: false (OFF)
+
+    // Mock data for testing the chart
+    const mockData = [
+      { timestamp: Date.now() - 60000 * 5, level: 45 },
+      { timestamp: Date.now() - 60000 * 4, level: 50 },
+      { timestamp: Date.now() - 60000 * 3, level: 55 },
+      { timestamp: Date.now() - 60000 * 2, level: 60 },
+      { timestamp: Date.now() - 60000 * 1, level: 65 },
+    ];
+
+    // Initialize chart with mock data or empty data
+    function initChart(data = mockData) {
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: data.map((entry) => new Date(entry.timestamp).toLocaleTimeString()),
+          datasets: [
+            {
+              label: "Water Level (cm)",
+              data: data.map((entry) => entry.level),
+              borderColor: "#007bff",
+              fill: false,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              display: true,
+              labels: {
+                color: "#fff",
+              },
+            },
+          },
+          scales: {
+            x: {
+              title: { display: true, text: "Time", color: "#fff" },
+              ticks: { color: "#fff" },
+            },
+            y: {
+              title: { display: true, text: "Water Level (cm)", color: "#fff" },
+              ticks: { color: "#fff" },
+            },
+          },
+        },
+      });
+    }
+
+    async function fetchLevels() {
+      const response = await fetch("/api/water-level");
+      const levels = await response.json();
+
+      // If no data is received, use mock data
+      const data = levels.length > 0 ? levels : mockData;
+
+      if (!chart) {
+        initChart(data); // Initialize chart
+      } else {
+        // Update chart with new data
+        chart.data.labels = data.map((entry) =>
+          new Date(entry.timestamp).toLocaleTimeString()
+        );
+        chart.data.datasets[0].data = data.map((entry) => entry.level);
+        chart.update();
+      }
+    }
+
+    async function controlPump(action) {
+      await fetch("/api/pump-control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+    }
+
+    function togglePump() {
+      const button = document.getElementById("pump-control");
+      pumpState = !pumpState;
+
+      if (pumpState) {
+        // Pump is ON
+        button.textContent = "Turn Pump OFF";
+        button.className = "on";
+        controlPump("ON");
+      } else {
+        // Pump is OFF
+        button.textContent = "Turn Pump ON";
+        button.className = "off";
+        controlPump("OFF");
+      }
+    }
+
+    socket.on("updateWaterLevel1", (data) => {
+      document.getElementById("water-level").innerText = `${data.level} cm`;
+
+      if (chart) {
+        const currentTime = new Date().toLocaleTimeString();
+        chart.data.labels.push(currentTime);
+        chart.data.datasets[0].data.push(data.level);
+
+        // Keep chart data within a reasonable length
+        if (chart.data.labels.length > 20) {
+          chart.data.labels.shift();
+          chart.data.datasets[0].data.shift();
+        }
+        chart.update();
+      }
+    });
+
+    socket.on("updateWaterLevel2", (data) => {
+      document.getElementById("alert-message").innerText = `Alert: ${data.level}`;
+    });
+
+    // Initialize the chart with mock data and fetch levels periodically
+    initChart();
+    fetchLevels();
+    setInterval(fetchLevels, 10000); // Refresh every 10 seconds
+  </script>
+</body>
+</html>

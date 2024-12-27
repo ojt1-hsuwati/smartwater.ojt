@@ -1,0 +1,9 @@
+ #data, #alerts {
+    margin-top: 20px;
+  }
+  .on {
+    background-color: green;
+  }
+  .off {
+    background-color: red;
+  }

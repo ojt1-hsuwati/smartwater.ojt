@@ -1,0 +1,71 @@
+ // Initialize chart
+    function initChart(data) {
+      chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: data.map((entry) => new Date(entry.timestamp).toLocaleTimeString()),
+          datasets: [{
+            label: "Water Level (cm)",
+            data: data.map((entry) => entry.level),
+            borderColor: "blue",
+            fill: false,
+          }],
+        },
+        options: {
+          scales: {
+            x: { title: { display: true, text: "Time" } },
+            y: { title: { display: true, text: "Water Level (cm)" } },
+          },
+        },
+      });
+    }
+
+    async function fetchLevels() {
+      const response = await fetch("/api/water-level");
+      const levels = await response.json();
+      if (!chart) initChart(levels);
+      else {
+        chart.data.labels = levels.map((entry) => new Date(entry.timestamp).toLocaleTimeString());
+        chart.data.datasets[0].data = levels.map((entry) => entry.level);
+        chart.update();
+      }
+    }
+
+    async function controlPump(action) {
+      await fetch("/api/pump-control", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
+    }
+
+    function togglePump() {
+      const button = document.getElementById("pump-control");
+      pumpState = !pumpState;
+
+      if (pumpState) {
+        // Pump is ON
+        button.textContent = "Turn Pump OFF";
+        button.className = "on";
+        controlPump("ON");
+      } else {
+        // Pump is OFF
+        button.textContent = "Turn Pump ON";
+        button.className = "off";
+        controlPump("OFF");
+      }
+    }
+
+    socket.on("update", (data) => {
+      document.getElementById("water-level").innerText = ${data.level} cm;
+    });
+
+    socket.on("alert", (data) => {
+      document.getElementById("alert-message").innerText = data.message;
+    });
+
+    fetchLevels();
+    setInterval(fetchLevels, 10000); // Refresh every 10 seconds
+  </script>
+</body>
+</html>
